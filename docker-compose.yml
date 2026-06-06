@@ -5,7 +5,3 @@ services:
       - "5000:5000"
     environment:
       - PRODUCT_API_BASE_URL=http://host.docker.internal:3001
-
-networks:
-  backend:
-    driver: bridge

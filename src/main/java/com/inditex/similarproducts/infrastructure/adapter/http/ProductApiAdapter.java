@@ -1,5 +1,6 @@
 package com.inditex.similarproducts.infrastructure.adapter.http;
 
+import com.inditex.similarproducts.domain.exception.ProductNotFoundException;
 import com.inditex.similarproducts.domain.model.ProductDetail;
 import com.inditex.similarproducts.domain.port.ProductDetailPort;
 import com.inditex.similarproducts.domain.port.SimilarProductIdsPort;
@@ -8,6 +9,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
@@ -31,9 +33,14 @@ public class ProductApiAdapter implements SimilarProductIdsPort, ProductDetailPo
         return webClient.get()
                 .uri("/product/{id}/similarids", productId)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, response ->
-                        response.createException().map(ex ->
-                                new RuntimeException("Failed to fetch similar IDs for product " + productId, ex)))
+                .onStatus(
+                        status -> status.value() == 404,
+                        response -> Mono.error(new ProductNotFoundException(productId)))
+                .onStatus(
+                        HttpStatusCode::isError,
+                        response -> response.createException()
+                                .map(ex -> new RuntimeException(
+                                        "Failed to fetch similar IDs for product " + productId, ex)))
                 .bodyToMono(new ParameterizedTypeReference<List<String>>() {})
                 .timeout(timeout)
                 .block();
@@ -44,8 +51,10 @@ public class ProductApiAdapter implements SimilarProductIdsPort, ProductDetailPo
         return webClient.get()
                 .uri("/product/{id}", productId)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> response.createException().map(ex ->
-                        new RuntimeException("Product not found: " + productId, ex)))
+                .onStatus(
+                        HttpStatusCode::isError,
+                        response -> response.createException()
+                                .map(ex -> new RuntimeException("Product not found: " + productId, ex)))
                 .bodyToMono(ProductDetailResponse.class)
                 .timeout(timeout)
                 .map(ProductDetailResponse::toDomain)

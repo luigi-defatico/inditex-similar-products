@@ -1,0 +1,12 @@
+server:
+  port: 5000
+
+spring:
+  threads:
+    virtual:
+      enabled: true
+
+product:
+  api:
+    base-url: http://localhost:3001
+    timeout-ms: 2000
